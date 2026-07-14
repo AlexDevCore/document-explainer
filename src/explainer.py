@@ -19,8 +19,8 @@ PROMPT_PATH = (
     Path(__file__).resolve().parent.parent / "prompts" / "explainer_system.txt"
 )
 
-# Shape every response follows, so the frontend can rely on these four keys.
-KEYS = ("summary", "actions", "consequences", "translation")
+# Shape every response follows, so the frontend can rely on these keys.
+KEYS = ("summary", "actions", "consequences")
 
 
 def _load_system_prompt(language: str) -> str:
@@ -37,7 +37,6 @@ def _demo_response(language: str) -> dict:
         "at dmv.ca.gov or by mail using the enclosed form.",
         "consequences": "[DEMO] If you miss the deadline, you may have to pay a late fee and "
         "driving with expired registration can lead to a ticket.",
-        "translation": f"[DEMO] (This is where the summary and actions appear in {language}.)",
         "demo": True,
     }
 
@@ -97,7 +96,7 @@ def _build_content(letter_text, file_data, file_media_type):
 
 def explain_letter(
     letter_text: str = "",
-    target_language: str = "Spanish",
+    target_language: str = "English",
     *,
     file_data: str | None = None,
     file_media_type: str | None = None,

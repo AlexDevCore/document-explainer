@@ -1,6 +1,6 @@
 import pytest
 
-from src import explainer
+from src import explainer, ui_translator
 from src.app import app
 from src.config import MAX_INPUT_CHARS
 
@@ -10,6 +10,8 @@ def client(monkeypatch):
     # Force demo mode so tests never make a real API call.
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.setattr(explainer, "load_environment", lambda: False)
+    monkeypatch.setattr(ui_translator, "load_environment", lambda: False)
+    ui_translator._cache.clear()
     app.config.update(TESTING=True)
     return app.test_client()
 
@@ -40,7 +42,19 @@ def test_explain_returns_demo(client):
     assert r.status_code == 200
     data = r.get_json()
     assert data["demo"] is True
-    assert "Russian" in data["translation"]
+    assert "summary" in data and "actions" in data and "consequences" in data
+
+
+def test_translate_ui_requires_language(client):
+    r = client.post("/translate-ui", json={"language": ""})
+    assert r.status_code == 400
+
+
+def test_translate_ui_falls_back_without_key(client):
+    r = client.post("/translate-ui", json={"language": "Portuguese"})
+    assert r.status_code == 200
+    strings = r.get_json()["strings"]
+    assert strings["explain_btn"] == "Explain"  # English fallback, no API key in tests
 
 
 def test_explain_file_demo(client):

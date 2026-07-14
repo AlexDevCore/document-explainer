@@ -14,6 +14,21 @@
       --line: #e3e7ec;
       --accent: #2f6fed;
       --accent-soft: #eaf1fe;
+      --danger: #c0392b;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #14181f; --card: #1c222c; --ink: #e8ecf1; --muted: #8b95a3;
+        --line: #2a3140; --accent: #5b9dff; --accent-soft: #1b2942; --danger: #ff6b5e;
+      }
+    }
+    :root[data-theme="dark"] {
+      --bg: #14181f; --card: #1c222c; --ink: #e8ecf1; --muted: #8b95a3;
+      --line: #2a3140; --accent: #5b9dff; --accent-soft: #1b2942; --danger: #ff6b5e;
+    }
+    :root[data-theme="light"] {
+      --bg: #f6f7f9; --card: #ffffff; --ink: #1c2430; --muted: #5b6673;
+      --line: #e3e7ec; --accent: #2f6fed; --accent-soft: #eaf1fe; --danger: #c0392b;
     }
     * { box-sizing: border-box; }
     body {
@@ -24,6 +39,14 @@
       line-height: 1.5;
     }
     .wrap { max-width: 760px; margin: 0 auto; padding: 32px 20px 64px; }
+    .top-bar { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 16px; }
+    .top-lang { flex: 1; min-width: 160px; max-width: 240px; }
+    .top-lang label { font-size: 0.8rem; margin-bottom: 4px; }
+    .theme-toggle {
+      background: var(--card); border: 1px solid var(--line); color: var(--ink);
+      border-radius: 8px; padding: 8px 12px; font-size: 1rem; cursor: pointer; font-family: inherit;
+      flex-shrink: 0;
+    }
     header h1 { font-size: 1.7rem; margin: 0 0 6px; }
     header p { color: var(--muted); margin: 0 0 24px; }
     .card {
@@ -43,6 +66,8 @@
       border-radius: 8px;
       font-size: 0.95rem;
       font-family: inherit;
+      background: var(--card);
+      color: var(--ink);
     }
     .label-row { display: flex; justify-content: space-between; align-items: baseline; }
     .link-btn {
@@ -82,7 +107,8 @@
       border-radius: 8px;
       font-size: 0.95rem;
       font-family: inherit;
-      background: #fff;
+      background: var(--card);
+      color: var(--ink);
     }
     button {
       background: var(--accent);
@@ -96,7 +122,8 @@
       white-space: nowrap;
     }
     button:disabled { opacity: 0.55; cursor: default; }
-    #otherWrap { display: none; }
+    #otherLangWrap { display: none; margin-top: 8px; }
+    #otherLangWrap .row { margin-top: 8px; }
     #results { display: none; }
     .result-block { margin-bottom: 18px; }
     .result-block:last-child { margin-bottom: 0; }
@@ -108,7 +135,6 @@
       color: var(--accent);
     }
     .result-block p { margin: 0; white-space: pre-wrap; }
-    .translation { background: var(--accent-soft); border-radius: 8px; padding: 14px; }
     .demo-note {
       background: #fff7e6;
       border: 1px solid #ffe0a3;
@@ -121,31 +147,51 @@
     }
     .disclaimer { color: var(--muted); font-size: 0.8rem; margin-top: 22px; text-align: center; }
     .spinner { display: none; color: var(--muted); font-size: 0.9rem; margin-top: 12px; }
-    .error { color: #c0392b; font-size: 0.9rem; margin-top: 12px; display: none; }
+    .error { color: var(--danger); font-size: 0.9rem; margin-top: 12px; display: none; }
+    html[dir="rtl"] .top-bar { flex-direction: row-reverse; }
+    html[dir="rtl"] .label-row { flex-direction: row-reverse; }
+    html[dir="rtl"] .row { flex-direction: row-reverse; }
   </style>
 </head>
 <body>
   <div class="wrap">
+    <div class="top-bar">
+      <div class="top-lang field">
+        <label for="interfaceLang" id="lbl_interface_language_label">Your language</label>
+        <select id="interfaceLang">
+          {% for code, name in language_options.items() %}
+          <option value="{{ code }}"{% if code == 'en' %} selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+          <option value="__other__">Other…</option>
+        </select>
+        <div id="otherLangWrap">
+          <input type="text" id="otherLangInput" placeholder="e.g. Portuguese" />
+          <button type="button" class="link-btn" id="applyLangBtn" style="margin-top:6px">Apply</button>
+        </div>
+      </div>
+      <button type="button" class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
+    </div>
+
     <header>
       <h1>Document Explainer</h1>
-      <p>Paste an official letter (DMV, IRS, bank, landlord, school…). Get a plain-language
-         explanation, what to do, and a translation.</p>
+      <p id="txt_heading_subtitle">Paste an official letter (DMV, IRS, bank, landlord, school…). Get a plain-language
+         explanation and what to do.</p>
     </header>
 
     <div class="card">
       <div class="label-row">
-        <label for="letter">Paste your letter</label>
+        <label for="letter" id="lbl_paste_label">Paste your letter</label>
         <button type="button" class="link-btn" id="exampleBtn">Try an example</button>
       </div>
       <textarea id="letter" maxlength="{{ max_chars }}" placeholder="Paste the text of your official letter here…"></textarea>
       <div class="char-count"><span id="charCount">0</span> / {{ max_chars }}</div>
 
-      <div class="or-divider"><span>or</span></div>
+      <div class="or-divider"><span id="txt_or_divider">or</span></div>
 
       <div class="upload-zone" id="uploadZone">
         <input type="file" id="fileInput" accept="image/*,application/pdf" hidden />
         <button type="button" class="upload-btn" id="uploadBtn">📎 Upload a photo or PDF</button>
-        <span class="upload-hint">or drag &amp; drop a file here</span>
+        <span class="upload-hint" id="txt_upload_hint">or drag &amp; drop a file here</span>
         <div class="file-pill" id="filePill" style="display:none">
           <span id="fileName"></span>
           <button type="button" class="clear-file" id="clearFile" aria-label="Remove file">✕</button>
@@ -153,23 +199,6 @@
       </div>
 
       <div class="row">
-        <div class="field">
-          <label for="language">Explain in your language</label>
-          <select id="language">
-            <option>Spanish</option>
-            <option>Chinese</option>
-            <option>Russian</option>
-            <option>Vietnamese</option>
-            <option>Arabic</option>
-            <option>Ukrainian</option>
-            <option>Tagalog</option>
-            <option value="__other__">Other…</option>
-          </select>
-        </div>
-        <div class="field" id="otherWrap">
-          <label for="otherLang">Your language</label>
-          <input type="text" id="otherLang" placeholder="e.g. Portuguese" />
-        </div>
         <button id="explainBtn">Explain</button>
       </div>
       <div class="spinner" id="spinner">Reading your letter…</div>
@@ -182,35 +211,125 @@
 
     <div class="card" id="results">
       <div class="result-block">
-        <h3>What this is</h3>
+        <h3 id="lbl_heading_summary">What this is</h3>
         <p id="summary"></p>
       </div>
       <div class="result-block">
-        <h3>What you need to do</h3>
+        <h3 id="lbl_heading_actions">What you need to do</h3>
         <p id="actions"></p>
       </div>
       <div class="result-block">
-        <h3>What happens if you ignore it</h3>
+        <h3 id="lbl_heading_consequences">What happens if you ignore it</h3>
         <p id="consequences"></p>
-      </div>
-      <div class="result-block">
-        <h3>In your language</h3>
-        <p class="translation" id="translation"></p>
       </div>
       <button type="button" class="link-btn copy-btn" id="copyBtn">📋 Copy result</button>
     </div>
 
     <p class="disclaimer">
-      This tool explains what a document says in plain language. It is not legal, medical,
-      or financial advice.<br />
-      Your letter is sent to Claude to generate this explanation and is not stored by this app.
+      <span id="txt_disclaimer_line1">This tool explains what a document says in plain language. It is not legal, medical,
+      or financial advice.</span><br />
+      <span id="txt_disclaimer_line2">Your letter is sent to Claude to generate this explanation and is not stored by this app.</span>
     </p>
   </div>
 
   <script>
-    const languageSel = document.getElementById("language");
-    const otherWrap = document.getElementById("otherWrap");
-    const otherLang = document.getElementById("otherLang");
+    const UI_STRINGS = {{ ui_strings | tojson }};
+    const LANGUAGE_ENGLISH_NAME = {{ language_english_name | tojson }};
+    const RTL_CODES = {{ rtl_codes | tojson }};
+
+    const interfaceLang = document.getElementById("interfaceLang");
+    const otherLangWrap = document.getElementById("otherLangWrap");
+    const otherLangInput = document.getElementById("otherLangInput");
+    const applyLangBtn = document.getElementById("applyLangBtn");
+    const themeToggle = document.getElementById("themeToggle");
+
+    let currentStrings = UI_STRINGS.en;
+    let currentLanguageName = "English"; // English name sent to /explain
+
+    // --- i18n: apply a strings dict to the whole page ---
+    function applyStrings(strings) {
+      currentStrings = strings;
+      document.querySelectorAll("[id^='txt_']").forEach((el) => {
+        const key = el.id.slice(4);
+        if (strings[key] !== undefined) el.textContent = strings[key];
+      });
+      document.querySelectorAll("[id^='lbl_']").forEach((el) => {
+        const key = el.id.slice(4);
+        if (strings[key] !== undefined) el.textContent = strings[key];
+      });
+      document.getElementById("exampleBtn").textContent = strings.example_btn;
+      document.getElementById("letter").placeholder = strings.textarea_placeholder;
+      document.getElementById("uploadBtn").textContent = strings.upload_btn;
+      document.getElementById("explainBtn").textContent = strings.explain_btn;
+      document.getElementById("spinner").textContent = strings.spinner_text;
+      document.getElementById("demoNote").textContent = strings.demo_note;
+      document.getElementById("copyBtn").textContent = strings.copy_btn;
+      document.getElementById("applyLangBtn").textContent = strings.apply_btn;
+      otherLangInput.placeholder = strings.custom_lang_placeholder;
+    }
+
+    function setDirection(code, isCustom) {
+      const rtl = !isCustom && RTL_CODES.includes(code);
+      document.documentElement.dir = rtl ? "rtl" : "ltr";
+    }
+
+    async function useLanguage(code) {
+      if (code === "__other__") {
+        otherLangWrap.style.display = "block";
+        return;
+      }
+      otherLangWrap.style.display = "none";
+      applyStrings(UI_STRINGS[code] || UI_STRINGS.en);
+      currentLanguageName = LANGUAGE_ENGLISH_NAME[code] || "English";
+      setDirection(code, false);
+    }
+
+    interfaceLang.addEventListener("change", () => useLanguage(interfaceLang.value));
+
+    async function applyCustomLanguage() {
+      const name = otherLangInput.value.trim();
+      if (!name) return;
+      applyLangBtn.disabled = true;
+      applyLangBtn.textContent = "…";
+      try {
+        const resp = await fetch("/translate-ui", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ language: name }),
+        });
+        const data = await resp.json();
+        applyStrings(data.strings || UI_STRINGS.en);
+        currentLanguageName = name;
+        setDirection(null, true);
+      } finally {
+        applyLangBtn.disabled = false;
+        applyLangBtn.textContent = currentStrings.apply_btn;
+      }
+    }
+    applyLangBtn.addEventListener("click", applyCustomLanguage);
+    otherLangInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") applyCustomLanguage();
+    });
+
+    // --- Theme toggle ---
+    function effectiveTheme() {
+      return document.documentElement.getAttribute("data-theme")
+        || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    }
+    function applyThemeIcon() {
+      themeToggle.textContent = effectiveTheme() === "dark" ? "☀️" : "🌙";
+    }
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme) document.documentElement.setAttribute("data-theme", savedTheme);
+    applyThemeIcon();
+    themeToggle.addEventListener("click", () => {
+      const next = effectiveTheme() === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      localStorage.setItem("theme", next);
+      applyThemeIcon();
+    });
+
+    // --- Result elements ---
     const btn = document.getElementById("explainBtn");
     const spinner = document.getElementById("spinner");
     const errorBox = document.getElementById("error");
@@ -221,15 +340,15 @@
 
     copyBtn.addEventListener("click", async () => {
       if (!lastResult) return;
+      const s = currentStrings;
       const text = [
-        "WHAT THIS IS\n" + lastResult.summary,
-        "WHAT YOU NEED TO DO\n" + lastResult.actions,
-        "WHAT HAPPENS IF YOU IGNORE IT\n" + lastResult.consequences,
-        "IN YOUR LANGUAGE\n" + lastResult.translation,
+        s.heading_summary + "\n" + lastResult.summary,
+        s.heading_actions + "\n" + lastResult.actions,
+        s.heading_consequences + "\n" + lastResult.consequences,
       ].join("\n\n");
       await navigator.clipboard.writeText(text);
       const original = copyBtn.textContent;
-      copyBtn.textContent = "✓ Copied!";
+      copyBtn.textContent = s.copy_btn_done;
       setTimeout(() => (copyBtn.textContent = original), 1500);
     });
 
@@ -260,6 +379,7 @@
     const fileName = document.getElementById("fileName");
     const clearFile = document.getElementById("clearFile");
     const MAX_FILE_BYTES = {{ max_file_bytes }};
+    const ALLOWED_FILE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"];
 
     let selectedFile = null; // { data, mediaType, name }
 
@@ -270,8 +390,13 @@
 
     function readFile(file) {
       errorBox.style.display = "none";
+      if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+        showError(currentStrings.error_unsupported_file);
+        return;
+      }
       if (file.size > MAX_FILE_BYTES) {
-        showError("File is too large (max " + Math.floor(MAX_FILE_BYTES / 1048576) + " MB).");
+        const mb = Math.floor(MAX_FILE_BYTES / 1048576);
+        showError(currentStrings.error_too_large_file.replace("{mb}", mb));
         return;
       }
       const reader = new FileReader();
@@ -313,17 +438,6 @@
       if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]);
     });
 
-    languageSel.addEventListener("change", () => {
-      otherWrap.style.display = languageSel.value === "__other__" ? "block" : "none";
-    });
-
-    function chosenLanguage() {
-      if (languageSel.value === "__other__") {
-        return otherLang.value.trim() || "Spanish";
-      }
-      return languageSel.value;
-    }
-
     btn.addEventListener("click", async () => {
       errorBox.style.display = "none";
       const text = letter.value.trim();
@@ -332,12 +446,12 @@
         body = {
           file_data: selectedFile.data,
           file_media_type: selectedFile.mediaType,
-          language: chosenLanguage(),
+          language: currentLanguageName,
         };
       } else if (text) {
-        body = { text, language: chosenLanguage() };
+        body = { text, language: currentLanguageName };
       } else {
-        showError("Please paste a letter or upload a file first.");
+        showError(currentStrings.error_empty);
         return;
       }
 
@@ -354,12 +468,17 @@
         });
         const data = await resp.json();
         if (!resp.ok) {
-          throw new Error(data.error || "Something went wrong.");
+          // Client-side checks already prevent empty/oversized/unsupported-file cases,
+          // so a real error here is almost always the backend/network (502) or a rate
+          // limit (429). Fall back to the server's English message for anything else.
+          const msg = resp.status >= 500
+            ? currentStrings.error_service
+            : (data.error || currentStrings.error_generic);
+          throw new Error(msg);
         }
         document.getElementById("summary").textContent = data.summary || "";
         document.getElementById("actions").textContent = data.actions || "";
         document.getElementById("consequences").textContent = data.consequences || "";
-        document.getElementById("translation").textContent = data.translation || "";
         demoNote.style.display = data.demo ? "block" : "none";
         results.style.display = "block";
         lastResult = data;

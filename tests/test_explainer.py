@@ -29,17 +29,15 @@ def test_demo_response_without_api_key(monkeypatch):
     for key in KEYS:
         assert key in result
     assert result.get("demo") is True
-    assert "Russian" in result["translation"]
 
 
 def test_parse_extracts_json_with_fences():
-    raw = '```json\n{"summary": "a", "actions": "b", "consequences": "c", "translation": "d"}\n```'
+    raw = '```json\n{"summary": "a", "actions": "b", "consequences": "c"}\n```'
     data = _parse(raw)
     assert data == {
         "summary": "a",
         "actions": "b",
         "consequences": "c",
-        "translation": "d",
     }
 
 
