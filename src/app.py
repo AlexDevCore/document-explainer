@@ -2,7 +2,7 @@
 
 from flask import Flask, jsonify, render_template, request
 
-from src.config import MAX_INPUT_CHARS
+from src.config import ALLOWED_FILE_TYPES, MAX_FILE_BYTES, MAX_INPUT_CHARS
 from src.explainer import explain_letter
 from src.logger import get_logger
 
@@ -13,17 +13,46 @@ app = Flask(__name__)
 
 @app.route("/")
 def index():
-    return render_template("index.html", max_chars=MAX_INPUT_CHARS)
+    return render_template(
+        "index.html", max_chars=MAX_INPUT_CHARS, max_file_bytes=MAX_FILE_BYTES
+    )
+
+
+def _handle_file(data, language):
+    """Validate an uploaded file and return a Flask response, or None if invalid inputs handled."""
+    file_data = data.get("file_data") or ""
+    file_media_type = (data.get("file_media_type") or "").strip()
+
+    if file_media_type not in ALLOWED_FILE_TYPES:
+        return jsonify(
+            {"error": "Unsupported file type. Use a JPG, PNG, WebP, GIF or PDF."}
+        ), 400
+    # base64 decodes to ~3/4 of its length in bytes.
+    approx_bytes = len(file_data) * 3 // 4
+    if approx_bytes > MAX_FILE_BYTES:
+        mb = MAX_FILE_BYTES // (1024 * 1024)
+        return jsonify({"error": f"File is too large (max {mb} MB)."}), 400
+
+    result = explain_letter(
+        target_language=language, file_data=file_data, file_media_type=file_media_type
+    )
+    if "error" in result:
+        return jsonify(result), 502
+    return jsonify(result)
 
 
 @app.route("/explain", methods=["POST"])
 def explain():
     data = request.get_json(silent=True) or {}
-    text = (data.get("text") or "").strip()
     language = (data.get("language") or "Spanish").strip()
 
+    # File upload path takes precedence if a file is present.
+    if data.get("file_data"):
+        return _handle_file(data, language)
+
+    text = (data.get("text") or "").strip()
     if not text:
-        return jsonify({"error": "Please paste the text of a letter first."}), 400
+        return jsonify({"error": "Please paste a letter or upload a file first."}), 400
     if len(text) > MAX_INPUT_CHARS:
         return (
             jsonify(

@@ -8,7 +8,7 @@ import json
 import re
 from pathlib import Path
 
-from anthropic import Anthropic
+from anthropic import Anthropic, APIError
 
 from src.config import MODEL, get_env, load_environment
 from src.logger import get_logger
@@ -70,8 +70,42 @@ def _extract_text(message) -> str:
     )
 
 
-def explain_letter(letter_text: str, target_language: str) -> dict:
-    """Explain one official letter. Returns a dict with KEYS (+ optional 'demo')."""
+def _build_content(letter_text, file_data, file_media_type):
+    """Build the Claude message content: pasted text, an image, or a PDF."""
+    if file_data:
+        if file_media_type == "application/pdf":
+            source_block = {
+                "type": "document",
+                "source": {
+                    "type": "base64",
+                    "media_type": file_media_type,
+                    "data": file_data,
+                },
+            }
+        else:
+            source_block = {
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": file_media_type,
+                    "data": file_data,
+                },
+            }
+        return [source_block, {"type": "text", "text": "Explain this official letter."}]
+    return letter_text
+
+
+def explain_letter(
+    letter_text: str = "",
+    target_language: str = "Spanish",
+    *,
+    file_data: str | None = None,
+    file_media_type: str | None = None,
+) -> dict:
+    """Explain one official letter (pasted text, image, or PDF).
+
+    Returns a dict with KEYS (+ optional 'demo'/'error').
+    """
     load_environment()
     api_key = get_env("ANTHROPIC_API_KEY")
     if not api_key:
@@ -84,7 +118,12 @@ def explain_letter(letter_text: str, target_language: str) -> dict:
             model=MODEL,
             max_tokens=3000,
             system=_load_system_prompt(target_language),
-            messages=[{"role": "user", "content": letter_text}],
+            messages=[
+                {
+                    "role": "user",
+                    "content": _build_content(letter_text, file_data, file_media_type),
+                }
+            ],
         )
     except APIError as exc:
         log.error("Claude API error: %s", exc)

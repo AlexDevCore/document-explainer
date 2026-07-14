@@ -1,5 +1,22 @@
 from src import explainer
-from src.explainer import KEYS, _parse, explain_letter
+from src.explainer import KEYS, _build_content, _parse, explain_letter
+
+
+def test_build_content_text():
+    assert _build_content("hello", None, None) == "hello"
+
+
+def test_build_content_image():
+    content = _build_content("", "BASE64DATA", "image/png")
+    assert content[0]["type"] == "image"
+    assert content[0]["source"]["media_type"] == "image/png"
+    assert content[0]["source"]["data"] == "BASE64DATA"
+
+
+def test_build_content_pdf():
+    content = _build_content("", "BASE64DATA", "application/pdf")
+    assert content[0]["type"] == "document"
+    assert content[0]["source"]["media_type"] == "application/pdf"
 
 
 def test_demo_response_without_api_key(monkeypatch):

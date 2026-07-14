@@ -3,8 +3,8 @@
 A small web tool that explains **official US letters** in plain language — for people
 who are new to the country and the system.
 
-Paste the text of a letter (DMV, IRS, bank, landlord, utility, school, health insurance…)
-and get back:
+Paste the text of a letter — **or upload a photo or PDF** of it (DMV, IRS, bank, landlord,
+utility, school, health insurance…) and get back:
 
 1. **What this is** — what the letter is and who sent it, in simple words
 2. **What you need to do** — concrete steps and any deadlines

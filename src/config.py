@@ -13,6 +13,16 @@ MODEL = "claude-sonnet-5"
 # Max characters accepted from the user (guards against runaway token cost).
 MAX_INPUT_CHARS = 8000
 
+# File upload limits.
+ALLOWED_FILE_TYPES = {
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "application/pdf",
+}
+MAX_FILE_BYTES = 8 * 1024 * 1024  # 8 MB (after base64 decode)
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ENV_FILE = PROJECT_ROOT / ".env"
 

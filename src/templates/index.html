@@ -51,6 +51,27 @@
     }
     .link-btn:hover { text-decoration: underline; }
     .char-count { text-align: right; color: var(--muted); font-size: 0.78rem; margin-top: 6px; }
+    .or-divider { text-align: center; margin: 16px 0; position: relative; color: var(--muted); font-size: 0.85rem; }
+    .or-divider::before { content: ""; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--line); }
+    .or-divider span { background: var(--card); padding: 0 12px; position: relative; }
+    .upload-zone {
+      border: 1.5px dashed var(--line); border-radius: 8px; padding: 18px; text-align: center;
+      transition: border-color .15s, background .15s;
+    }
+    .upload-zone.dragover { border-color: var(--accent); background: var(--accent-soft); }
+    .upload-btn {
+      background: var(--accent-soft); color: var(--accent); border: 0; border-radius: 8px;
+      padding: 10px 16px; font-size: 0.9rem; font-weight: 600; cursor: pointer; font-family: inherit;
+    }
+    .upload-hint { display: block; color: var(--muted); font-size: 0.8rem; margin-top: 8px; }
+    .file-pill {
+      display: inline-flex; align-items: center; gap: 8px; margin-top: 12px;
+      background: var(--accent-soft); border-radius: 20px; padding: 6px 12px; font-size: 0.85rem;
+    }
+    .clear-file {
+      background: none; border: 0; cursor: pointer; color: var(--muted);
+      font-size: 0.9rem; padding: 0; font-family: inherit;
+    }
     .row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-top: 16px; }
     .field { flex: 1; min-width: 180px; }
     select, input[type="text"] {
@@ -117,6 +138,18 @@
       </div>
       <textarea id="letter" maxlength="{{ max_chars }}" placeholder="Paste the text of your official letter here…"></textarea>
       <div class="char-count"><span id="charCount">0</span> / {{ max_chars }}</div>
+
+      <div class="or-divider"><span>or</span></div>
+
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept="image/*,application/pdf" hidden />
+        <button type="button" class="upload-btn" id="uploadBtn">📎 Upload a photo or PDF</button>
+        <span class="upload-hint">or drag &amp; drop a file here</span>
+        <div class="file-pill" id="filePill" style="display:none">
+          <span id="fileName"></span>
+          <button type="button" class="clear-file" id="clearFile" aria-label="Remove file">✕</button>
+        </div>
+      </div>
 
       <div class="row">
         <div class="field">
@@ -199,6 +232,67 @@
       charCount.textContent = letter.value.length;
     });
 
+    // --- File upload ---
+    const fileInput = document.getElementById("fileInput");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const uploadZone = document.getElementById("uploadZone");
+    const filePill = document.getElementById("filePill");
+    const fileName = document.getElementById("fileName");
+    const clearFile = document.getElementById("clearFile");
+    const MAX_FILE_BYTES = {{ max_file_bytes }};
+
+    let selectedFile = null; // { data, mediaType, name }
+
+    function showError(msg) {
+      errorBox.textContent = msg;
+      errorBox.style.display = "block";
+    }
+
+    function readFile(file) {
+      errorBox.style.display = "none";
+      if (file.size > MAX_FILE_BYTES) {
+        showError("File is too large (max " + Math.floor(MAX_FILE_BYTES / 1048576) + " MB).");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        selectedFile = {
+          data: reader.result.split(",")[1],
+          mediaType: file.type,
+          name: file.name,
+        };
+        fileName.textContent = file.name;
+        filePill.style.display = "inline-flex";
+      };
+      reader.readAsDataURL(file);
+    }
+
+    uploadBtn.addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files[0]) readFile(fileInput.files[0]);
+    });
+    clearFile.addEventListener("click", () => {
+      selectedFile = null;
+      filePill.style.display = "none";
+      fileInput.value = "";
+    });
+
+    ["dragover", "dragenter"].forEach((ev) =>
+      uploadZone.addEventListener(ev, (e) => {
+        e.preventDefault();
+        uploadZone.classList.add("dragover");
+      })
+    );
+    ["dragleave", "drop"].forEach((ev) =>
+      uploadZone.addEventListener(ev, (e) => {
+        e.preventDefault();
+        uploadZone.classList.remove("dragover");
+      })
+    );
+    uploadZone.addEventListener("drop", (e) => {
+      if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]);
+    });
+
     languageSel.addEventListener("change", () => {
       otherWrap.style.display = languageSel.value === "__other__" ? "block" : "none";
     });
@@ -211,11 +305,19 @@
     }
 
     btn.addEventListener("click", async () => {
-      const text = document.getElementById("letter").value.trim();
       errorBox.style.display = "none";
-      if (!text) {
-        errorBox.textContent = "Please paste the text of a letter first.";
-        errorBox.style.display = "block";
+      const text = letter.value.trim();
+      let body;
+      if (selectedFile) {
+        body = {
+          file_data: selectedFile.data,
+          file_media_type: selectedFile.mediaType,
+          language: chosenLanguage(),
+        };
+      } else if (text) {
+        body = { text, language: chosenLanguage() };
+      } else {
+        showError("Please paste a letter or upload a file first.");
         return;
       }
 
@@ -228,7 +330,7 @@
         const resp = await fetch("/explain", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text, language: chosenLanguage() }),
+          body: JSON.stringify(body),
         });
         const data = await resp.json();
         if (!resp.ok) {
