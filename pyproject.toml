@@ -8,6 +8,8 @@ dependencies = [
     "anthropic>=0.116.0",
     "python-dotenv>=1.2.2",
     "flask>=3.0.0",
+    "gunicorn>=23.0.0",
+    "flask-limiter>=3.9.0",
 ]
 
 [tool.uv]

@@ -1,6 +1,8 @@
 """Flask web app: paste an official letter, get a plain-language explanation."""
 
 from flask import Flask, jsonify, render_template, request
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 from src.config import ALLOWED_FILE_TYPES, MAX_FILE_BYTES, MAX_INPUT_CHARS
 from src.explainer import explain_letter
@@ -9,6 +11,9 @@ from src.logger import get_logger
 log = get_logger(__name__)
 
 app = Flask(__name__)
+
+# Protects the Anthropic budget from a single abusive client hammering /explain.
+limiter = Limiter(get_remote_address, app=app, default_limits=[])
 
 
 @app.route("/")
@@ -42,6 +47,7 @@ def _handle_file(data, language):
 
 
 @app.route("/explain", methods=["POST"])
+@limiter.limit("10 per minute; 50 per day")
 def explain():
     data = request.get_json(silent=True) or {}
     language = (data.get("language") or "Spanish").strip()
