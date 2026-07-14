@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Letter Explainer — understand any official letter</title>
+  <title>Document Explainer — understand any official letter</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%93%84</text></svg>" />
   <style>
     :root {
@@ -72,6 +72,7 @@
       background: none; border: 0; cursor: pointer; color: var(--muted);
       font-size: 0.9rem; padding: 0; font-family: inherit;
     }
+    .copy-btn { margin-top: 6px; font-size: 0.8rem; }
     .row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-top: 16px; }
     .field { flex: 1; min-width: 180px; }
     select, input[type="text"] {
@@ -126,7 +127,7 @@
 <body>
   <div class="wrap">
     <header>
-      <h1>Letter Explainer</h1>
+      <h1>Document Explainer</h1>
       <p>Paste an official letter (DMV, IRS, bank, landlord, school…). Get a plain-language
          explanation, what to do, and a translation.</p>
     </header>
@@ -196,11 +197,13 @@
         <h3>In your language</h3>
         <p class="translation" id="translation"></p>
       </div>
+      <button type="button" class="link-btn copy-btn" id="copyBtn">📋 Copy result</button>
     </div>
 
     <p class="disclaimer">
       This tool explains what a document says in plain language. It is not legal, medical,
-      or financial advice.
+      or financial advice.<br />
+      Your letter is sent to Claude to generate this explanation and is not stored by this app.
     </p>
   </div>
 
@@ -213,6 +216,23 @@
     const errorBox = document.getElementById("error");
     const results = document.getElementById("results");
     const demoNote = document.getElementById("demoNote");
+    const copyBtn = document.getElementById("copyBtn");
+    let lastResult = null;
+
+    copyBtn.addEventListener("click", async () => {
+      if (!lastResult) return;
+      const text = [
+        "WHAT THIS IS\n" + lastResult.summary,
+        "WHAT YOU NEED TO DO\n" + lastResult.actions,
+        "WHAT HAPPENS IF YOU IGNORE IT\n" + lastResult.consequences,
+        "IN YOUR LANGUAGE\n" + lastResult.translation,
+      ].join("\n\n");
+      await navigator.clipboard.writeText(text);
+      const original = copyBtn.textContent;
+      copyBtn.textContent = "✓ Copied!";
+      setTimeout(() => (copyBtn.textContent = original), 1500);
+    });
+
     const letter = document.getElementById("letter");
     const charCount = document.getElementById("charCount");
     const exampleBtn = document.getElementById("exampleBtn");
@@ -342,6 +362,7 @@
         document.getElementById("translation").textContent = data.translation || "";
         demoNote.style.display = data.demo ? "block" : "none";
         results.style.display = "block";
+        lastResult = data;
       } catch (e) {
         errorBox.textContent = e.message;
         errorBox.style.display = "block";

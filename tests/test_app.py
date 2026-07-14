@@ -17,7 +17,7 @@ def client(monkeypatch):
 def test_index_ok(client):
     r = client.get("/")
     assert r.status_code == 200
-    assert b"Letter Explainer" in r.data
+    assert b"Document Explainer" in r.data
 
 
 def test_explain_rejects_empty(client):

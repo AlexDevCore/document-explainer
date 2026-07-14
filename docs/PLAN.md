@@ -1,96 +1,97 @@
-# План проекта — Document Explainer
+# Project Plan — Document Explainer
 
-Рабочий план разработки. Продукт: веб-инструмент, который объясняет официальные письма
-США простым языком + перевод + что делать. Аудитория: newcomers.
+Working development plan. Product: a web tool that explains official US letters in
+plain language + translation + what to do. Audience: newcomers.
 
-**Контекст:** proof-of-work для заявки Claude Corps (дедлайн 17 июля 2026). Для заявки
-достаточно рабочего Этапа 1 + скриншот; Этапы 2–3 усиливают, но не критичны под дедлайн.
-
----
-
-## ✅ Этап 0 — MVP (готово, 14 июля)
-
-Текстовая версия: вставил письмо → объяснение (4 блока) + перевод.
-- Flask + Claude (`claude-sonnet-5`), English UI, dropdown языков + "other"
-- Demo-режим без ключа, обработка ошибок API, лимит ввода 8000 + счётчик
-- 18/18 тестов, desktop + mobile проверены, git (2 коммита)
+**Context:** proof-of-work for a Claude Corps application (deadline July 17, 2026).
+Stage 1 + a screenshot is enough for the application; Stages 2-3 strengthen it but
+aren't critical under the deadline.
 
 ---
 
-## 🔜 Этап 1 — Оживить ключом (сегодня, ~10 мин)
+## Stage 0 — MVP (done, July 14)
 
-Цель: demo-ответы заменяются реальными вызовами Claude.
-
-1. Ключ на console.anthropic.com, пополнить ~$5 → **verify:** ключ создан
-2. `cp .env.example .env`, вписать `ANTHROPIC_API_KEY=...` → **verify:** `.env` есть, git его не видит
-3. `uv run python -m src.app` → localhost:5000 → **verify:** сервер поднялся
-4. Вставить реальное письмо (или из `docs/example-letters.md`) → **verify:** приходит НЕ demo-ответ, 4 блока осмысленны, перевод корректен
-5. Проверить 2–3 типа писем (DMV / IRS / аренда) на разных языках → **verify:** качество стабильно
-6. Скриншот рабочего результата → **verify:** есть картинка для заявки
+Text version: paste a letter → explanation (4 blocks) + translation.
+- Flask + Claude (`claude-sonnet-5`), English UI, language dropdown + "other"
+- Demo mode without a key, API error handling, 8000-char input limit + counter
+- 18/18 tests, desktop + mobile checked, git (2 commits)
 
 ---
 
-## ✅ Этап 2 — Загрузка файлов (готово)
+## Stage 1 — Bring it to life with a key (done, July 14)
 
-Реализовано: загрузка фото/PDF (drag&drop + кнопка), Claude vision читает изображение/PDF
-напрямую (без отдельного OCR). Валидация типа и размера (≤8 МБ). 24/24 теста. Проверено
-вживую: реальная картинка письма → корректное объяснение + перевод, честно отметил
-нечитаемый фрагмент вместо галлюцинации. Скриншот: `A:\Claude\letter-explainer-FILE.png`.
+Goal: demo answers replaced with real Claude calls.
 
-Ключевое было: **отдельный OCR не нужен** — Claude читает изображения и PDF нативно.
+1. Key at console.anthropic.com, ~$5 added → **verify:** key created
+2. `cp .env.example .env`, set `ANTHROPIC_API_KEY=...` → **verify:** `.env` exists, git ignores it
+3. `uv run python -m src.app` → localhost:5000 → **verify:** server up
+4. Paste a real letter (or from `docs/example-letters.md`) → **verify:** response is NOT demo, all 4 blocks make sense, translation is correct
+5. Check 2-3 letter types (DMV / IRS / lease) in different languages → **verify:** quality holds up
+6. Screenshot of a live result → **verify:** have an image for the application
+
+---
+
+## Stage 2 — File upload (done)
+
+Implemented: photo/PDF upload (drag&drop + button), Claude vision reads the image/PDF
+directly (no separate OCR). Type and size validation (≤8 MB). 24/24 tests. Verified
+live: a real photo of a letter → correct explanation + translation, honestly flagged
+an unreadable fragment instead of hallucinating. Screenshot: `A:\Claude\letter-explainer-FILE.png`.
+
+The key insight: **no separate OCR needed** — Claude reads images and PDFs natively.
 
 **Backend:**
-- Роутинг по типу файла → нужный content-блок Claude:
-  - JPEG/PNG → image-блок (base64 + media_type)
-  - PDF → document-блок (base64) — Claude читает напрямую
-  - (опц.) текстовый PDF → извлечь текст через `pypdf`, если хотим дешевле
-- Валидация: тип файла + размер (image ≤ ~5 МБ, PDF ≤ ~32 МБ / лимит страниц)
-- Тот же системный промпт, меняется только вход
-- Demo-заглушка для сборки без ключа (как в Этапе 0)
+- Route by file type → the right Claude content block:
+  - JPEG/PNG → image block (base64 + media_type)
+  - PDF → document block (base64) — Claude reads it directly
+  - (optional) text-based PDF → extract text via `pypdf` if we want it cheaper
+- Validation: file type + size (image ≤ ~5 MB, PDF ≤ ~32 MB / page limit)
+- Same system prompt, only the input changes
+- Demo fallback for building without a key (like Stage 0)
 
 **Frontend:**
-- Кнопка загрузки + drag&drop; на мобильном — фото с камеры (`accept="image/*" capture`)
-- Превью имени файла, читаем как base64
-- Переключение: "вставить текст" ИЛИ "загрузить файл"
+- Upload button + drag&drop; on mobile, photo from camera (`accept="image/*" capture`)
+- Filename preview, read as base64
+- Toggle: "paste text" OR "upload a file"
 
-**Тесты + verify:**
-- Загрузка JPEG письма → осмысленное объяснение
-- Загрузка PDF → то же
-- Слишком большой/неподдерживаемый файл → понятная ошибка
-- Тесты роута (demo-режим), общий прогон зелёный
+**Tests + verify:**
+- Upload a JPEG letter → meaningful explanation
+- Upload a PDF → same
+- Oversized/unsupported file → clear error
+- Route tests (demo mode), full suite green
 
-**Нюансы:** картинки/PDF дороже по токенам (для демо — копейки); base64 раздувает payload
-(для больших файлов позже — multipart); ограничить число страниц PDF.
+**Notes:** images/PDFs cost more in tokens (pennies for a demo); base64 inflates the
+payload (multipart later for larger files); cap PDF page count.
 
 ---
 
-## ✅ Этап 3 — Публичная ссылка (готово, 14 июля)
+## Stage 3 — Public link (done, July 14)
 
 **URL: https://document-explainer-production.up.railway.app**
 
-- Хостинг: Railway (проект `document-explainer`, CLI уже был настроен)
-- Продакшен-сервер: gunicorn (1 worker, 4 threads) вместо Flask dev-сервера
-- Rate-limit: 10/мин, 50/день на IP (Flask-Limiter) — защита от злоупотребления
-- Spend-limit $10/мес на ключе (настроено в консоли Anthropic)
-- Ключ ротирован (старый, засвеченный в чате, отозван) и хранится только как секрет
-  переменной окружения Railway — не в коде, не в git
-- **verify пройден:** реальный вызов через публичный URL — корректное объяснение
-  + перевод на русский, без demo-режима
+- Hosting: Railway (project `document-explainer`, CLI was already set up)
+- Production server: gunicorn (1 worker, 4 threads) instead of the Flask dev server
+- Rate limit: 10/min, 50/day per IP (Flask-Limiter) — protects against abuse
+- $10/month spend limit on the key (set in the Anthropic console)
+- Key rotated (the old one, exposed in chat, was revoked) and stored only as a
+  Railway environment secret — not in code, not in git
+- **Verify passed:** a real call through the public URL — correct explanation
+  + Russian translation, no demo mode
 
 ---
 
-## ✨ Этап 4 — Полировка (опц., если останется время)
+## Stage 4 — Polish (optional, if time allows)
 
-- Кнопка "Copy" для результата
-- Больше языков / автоопределение языка письма
-- Лёгкий брендинг (название, лого)
-- Заметка о приватности (файлы не хранятся)
+- "Copy" button for the result
+- More languages / auto-detect the letter's language
+- Light branding (name, logo)
+- Privacy note (files aren't stored)
 
 ---
 
-## Приоритеты под дедлайн 17 июля
+## Priorities under the July 17 deadline
 
-1. **Обязательно:** Этап 1 (живая текстовая версия + скриншот) — этого хватает для заявки
-2. **Сильно желательно:** Этап 2 (файлы) — заметно мощнее демонстрация
-3. **Бонус:** Этап 3 (публичная ссылка) — если время позволит
-4. Этап 4 — после подачи
+1. **Required:** Stage 1 (live text version + screenshot) — enough for the application
+2. **Strongly recommended:** Stage 2 (files) — a noticeably stronger demonstration
+3. **Bonus:** Stage 3 (public link) — if time allows
+4. Stage 4 — after submitting
