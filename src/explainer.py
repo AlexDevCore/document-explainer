@@ -70,10 +70,17 @@ def explain_letter(letter_text: str, target_language: str) -> dict:
         return _demo_response(target_language)
 
     client = Anthropic(api_key=api_key)
-    message = client.messages.create(
-        model=MODEL,
-        max_tokens=2000,
-        system=_load_system_prompt(target_language),
-        messages=[{"role": "user", "content": letter_text}],
-    )
+    try:
+        message = client.messages.create(
+            model=MODEL,
+            max_tokens=2000,
+            system=_load_system_prompt(target_language),
+            messages=[{"role": "user", "content": letter_text}],
+        )
+    except APIError as exc:
+        log.error("Claude API error: %s", exc)
+        return {
+            "error": "Could not reach the explanation service. Please try again in a moment."
+        }
+
     return _parse(message.content[0].text)

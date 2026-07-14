@@ -10,6 +10,9 @@ PROJECT_NAME = "document-explainer"
 # Claude model used for explanations (quality matters for official letters).
 MODEL = "claude-sonnet-5"
 
+# Max characters accepted from the user (guards against runaway token cost).
+MAX_INPUT_CHARS = 8000
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ENV_FILE = PROJECT_ROOT / ".env"
 

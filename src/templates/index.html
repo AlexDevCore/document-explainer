@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Letter Explainer — understand any official letter</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%93%84</text></svg>" />
   <style>
     :root {
       --bg: #f6f7f9;
@@ -43,6 +44,13 @@
       font-size: 0.95rem;
       font-family: inherit;
     }
+    .label-row { display: flex; justify-content: space-between; align-items: baseline; }
+    .link-btn {
+      background: none; border: 0; color: var(--accent); cursor: pointer;
+      font-size: 0.85rem; padding: 0; font-family: inherit;
+    }
+    .link-btn:hover { text-decoration: underline; }
+    .char-count { text-align: right; color: var(--muted); font-size: 0.78rem; margin-top: 6px; }
     .row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-top: 16px; }
     .field { flex: 1; min-width: 180px; }
     select, input[type="text"] {
@@ -103,8 +111,12 @@
     </header>
 
     <div class="card">
-      <label for="letter">Paste your letter</label>
-      <textarea id="letter" placeholder="Paste the text of your official letter here…"></textarea>
+      <div class="label-row">
+        <label for="letter">Paste your letter</label>
+        <button type="button" class="link-btn" id="exampleBtn">Try an example</button>
+      </div>
+      <textarea id="letter" maxlength="{{ max_chars }}" placeholder="Paste the text of your official letter here…"></textarea>
+      <div class="char-count"><span id="charCount">0</span> / {{ max_chars }}</div>
 
       <div class="row">
         <div class="field">
@@ -168,6 +180,24 @@
     const errorBox = document.getElementById("error");
     const results = document.getElementById("results");
     const demoNote = document.getElementById("demoNote");
+    const letter = document.getElementById("letter");
+    const charCount = document.getElementById("charCount");
+    const exampleBtn = document.getElementById("exampleBtn");
+
+    const EXAMPLE = "FINAL NOTICE — Vehicle Registration Renewal. Our records show that the "
+      + "registration for your vehicle (plate 7ABC123) expires on 03/15/2026. To avoid "
+      + "penalties, you must renew before this date, either online at dmv.ca.gov or by mail "
+      + "using the enclosed form. A late fee of $25 will be added after the due date, and "
+      + "driving with an expired registration may result in a citation.";
+
+    letter.addEventListener("input", () => {
+      charCount.textContent = letter.value.length;
+    });
+
+    exampleBtn.addEventListener("click", () => {
+      letter.value = EXAMPLE;
+      charCount.textContent = letter.value.length;
+    });
 
     languageSel.addEventListener("change", () => {
       otherWrap.style.display = languageSel.value === "__other__" ? "block" : "none";
