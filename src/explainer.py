@@ -61,6 +61,15 @@ def _parse(raw: str) -> dict:
     return {k: data.get(k, "") for k in KEYS}
 
 
+def _extract_text(message) -> str:
+    """Join all text blocks, skipping thinking/other block types."""
+    return "".join(
+        block.text
+        for block in message.content
+        if getattr(block, "type", None) == "text"
+    )
+
+
 def explain_letter(letter_text: str, target_language: str) -> dict:
     """Explain one official letter. Returns a dict with KEYS (+ optional 'demo')."""
     load_environment()
@@ -73,7 +82,7 @@ def explain_letter(letter_text: str, target_language: str) -> dict:
     try:
         message = client.messages.create(
             model=MODEL,
-            max_tokens=2000,
+            max_tokens=3000,
             system=_load_system_prompt(target_language),
             messages=[{"role": "user", "content": letter_text}],
         )
@@ -83,4 +92,4 @@ def explain_letter(letter_text: str, target_language: str) -> dict:
             "error": "Could not reach the explanation service. Please try again in a moment."
         }
 
-    return _parse(message.content[0].text)
+    return _parse(_extract_text(message))
