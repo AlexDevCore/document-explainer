@@ -285,6 +285,10 @@
     }
 
     interfaceLang.addEventListener("change", () => useLanguage(interfaceLang.value));
+    // Browsers can restore a <select>'s previous value on navigation without firing
+    // "change" (bfcache / form restore). Sync our JS state to whatever is actually
+    // selected right now, instead of assuming the server-rendered default.
+    useLanguage(interfaceLang.value);
 
     async function applyCustomLanguage() {
       const name = otherLangInput.value.trim();
@@ -292,7 +296,7 @@
       applyLangBtn.disabled = true;
       applyLangBtn.textContent = "…";
       try {
-        const resp = await fetch("/translate-ui", {
+        const resp = await fetchWithRetry("/translate-ui", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ language: name }),
@@ -328,6 +332,19 @@
       localStorage.setItem("theme", next);
       applyThemeIcon();
     });
+
+    // Retries once on a raw network failure (e.g. a cold-starting server dropping
+    // the first connection). Does NOT retry on a normal HTTP error response (4xx/5xx)
+    // - those already came back from the server and retrying won't change that.
+    async function fetchWithRetry(url, opts, retriesLeft = 1) {
+      try {
+        return await fetch(url, opts);
+      } catch (networkErr) {
+        if (retriesLeft <= 0) throw networkErr;
+        await new Promise((r) => setTimeout(r, 1000));
+        return fetchWithRetry(url, opts, retriesLeft - 1);
+      }
+    }
 
     // --- Result elements ---
     const btn = document.getElementById("explainBtn");
@@ -461,7 +478,7 @@
       demoNote.style.display = "none";
 
       try {
-        const resp = await fetch("/explain", {
+        const resp = await fetchWithRetry("/explain", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
@@ -483,7 +500,10 @@
         results.style.display = "block";
         lastResult = data;
       } catch (e) {
-        errorBox.textContent = e.message;
+        // A raw TypeError ("Failed to fetch") means the request never reached the
+        // server (dropped connection, cold start) - show a translated message
+        // instead of the browser's untranslated internal wording.
+        errorBox.textContent = e instanceof TypeError ? currentStrings.error_service : e.message;
         errorBox.style.display = "block";
       } finally {
         btn.disabled = false;
