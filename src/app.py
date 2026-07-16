@@ -1,6 +1,6 @@
 """Flask web app: paste an official letter, get a plain-language explanation."""
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, Response, jsonify, render_template, request
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
@@ -29,6 +29,23 @@ def index():
         language_english_name=LANGUAGE_ENGLISH_NAME,
         rtl_codes=list(RTL_CODES),
     )
+
+
+@app.route("/robots.txt")
+def robots():
+    body = "User-agent: *\nAllow: /\nSitemap: https://document-explainer-production.up.railway.app/sitemap.xml\n"
+    return Response(body, mimetype="text/plain")
+
+
+@app.route("/sitemap.xml")
+def sitemap():
+    body = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        "  <url><loc>https://document-explainer-production.up.railway.app/</loc></url>\n"
+        "</urlset>\n"
+    )
+    return Response(body, mimetype="application/xml")
 
 
 @app.route("/translate-ui", methods=["POST"])
